@@ -98,6 +98,13 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
      * Actually，when the {@link ExtensionLoader} init the {@link Protocol} instants,it will automatically wraps two
      * layers, and eventually will get a <b>ProtocolFilterWrapper</b> or <b>ProtocolListenerWrapper</b>
      */
+    //这样使用，先获取ExtensionLoader实例，然后加载自适应的Protocol扩展点
+    /*可以看到，使用扩展点加载的步骤大概有三步：
+    1、获取ExtensionLoader实例。
+    2、获取自适应实现。
+    3、使用获取到的实现
+    每个类型只有一个ExtensionLoader比如Protocol只有一个，并且初始化后type是Protocol.class，objectFactory是AdaptiveExtensionFactory
+    */
     private static final Protocol REF_PROTOCOL = ExtensionLoader.getExtensionLoader(Protocol.class).getAdaptiveExtension();
 
     /**

@@ -40,8 +40,12 @@ public class AdaptiveCompiler implements Compiler {
         if (name != null && name.length() > 0) {
             compiler = loader.getExtension(name);
         } else {
+            //@SPI("javassist"),name=javassist
+            //javassist=org.apache.dubbo.common.compiler.support.JavassistCompiler
+            //compiler=JavassistCompiler实例
             compiler = loader.getDefaultExtension();
         }
+        //AbstractCompiler--->doCompile
         return compiler.compile(code, classLoader);
     }
 
