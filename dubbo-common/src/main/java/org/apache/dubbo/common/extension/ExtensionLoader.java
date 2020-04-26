@@ -92,7 +92,7 @@ public class ExtensionLoader<T> {
     private final Holder<Map<String, Class<?>>> cachedClasses = new Holder<>();
 
     private final Map<String, Object> cachedActivates = new ConcurrentHashMap<>();
-    //键是扩展的name，值是一个持有name对应的实现类实例的Holder
+    //键是扩展的name，值是一个持有name对应的实现类实例的Holder,key就是dubbo,value是DubboProtocol的实例，Holder中持有DubboProtocol的实例。
     private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<>();
     //在当前的ExtensionLoader中保存着一个Holder实例，用来缓存自适应实现类的实例,Protocol$Adaptive
     private final Holder<Object> cachedAdaptiveInstance = new Holder<>();
@@ -547,6 +547,14 @@ public class ExtensionLoader<T> {
         //getExtensionClasses加载当前Extension的所有实现
         //上面已经解析过，返回的是一个Map，键是name，值是name对应的Class
         //根据name查找对应的Class，dubbo：DubboProtocol
+        /**
+         * getExtensionClasses加载当前扩展点的所有实现
+         * 比如：
+         * 我们在使用ExtensionLoader.getExtensionLoader(Protocol.class)
+         * 获取Protocol的ExtensionLoader的时候，就已经设置了当前ExtensionLoader
+         * 的类型是Protocol的，所以这里获取的时候就是Protocol的所有实现。
+         * 获取到所有的实现之后，getExtensionClasses()返回的是Map<String, Class<?>>
+         */
         Class<?> clazz = getExtensionClasses().get(name);
         if (clazz == null) {
             throw findException(name);
@@ -555,11 +563,15 @@ public class ExtensionLoader<T> {
             //从已创建实例缓存中获取
             T instance = (T) EXTENSION_INSTANCES.get(clazz);
             if (instance == null) {
-                //不存在的话就创建一个新实例，加入到缓存中去
+                //不存在的话就根据Class通过反射来创建具体的实例，
                 EXTENSION_INSTANCES.putIfAbsent(clazz, clazz.newInstance());
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
-            //属性注入
+            /**
+             * 向实例中注入依赖的扩展
+             * 如果一个扩展点A依赖了其他的扩展点B，并且有setter方法
+             * 就会执行将扩展点B注入扩展点A的操作
+             */
             injectExtension(instance);
             //ProtocolFilterWrapper
             //和ProtocolListenerWrapper

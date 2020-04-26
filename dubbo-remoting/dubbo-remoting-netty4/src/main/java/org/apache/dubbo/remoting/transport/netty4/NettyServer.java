@@ -72,6 +72,13 @@ public class NettyServer extends AbstractServer implements Server {
 
     @Override
     protected void doOpen() throws Throwable {
+        /**
+         　boss线程数默认只有一个；
+         worker线程数：Runtime.getRuntime().availableProcessors() + 1，为计算机核数+1；
+         服务端逻辑处理器为NettyHandler：
+         编码器为：InternalEncoder实例，内部使用NettyServer的DubboCountCodec实例来编码
+         解码器为：InternalDecoder实例，内部使用NettyServer的DubboCountCodec实例来解码
+         　*/
         bootstrap = new ServerBootstrap();
 
         bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory("NettyServerBoss", true));

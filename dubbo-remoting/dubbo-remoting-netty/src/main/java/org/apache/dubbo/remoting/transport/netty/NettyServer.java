@@ -61,11 +61,21 @@ public class NettyServer extends AbstractServer implements Server {
     private org.jboss.netty.channel.Channel channel;
 
     public NettyServer(URL url, ChannelHandler handler) throws RemotingException {
+        //threadname=DubboServerHandler-10.10.10.10:20880
+        //用ChannelHandlers.wrap(DecodeHandler对象, providerUrl)对DecodeHandler对象进行了三层包装，最终得到MultiMessageHandler实例；
+        //最后调用父类的构造器初始化NettyServer的各个属性，最后启动netty
         super(url, ChannelHandlers.wrap(handler, ExecutorUtil.setThreadName(url, SERVER_THREAD_POOL_NAME)));
     }
 
     @Override
     protected void doOpen() throws Throwable {
+        /**
+        　boss线程数默认只有一个；
+         worker线程数：Runtime.getRuntime().availableProcessors() + 1，为计算机核数+1；
+         服务端逻辑处理器为NettyHandler：
+         编码器为：InternalEncoder实例，内部使用NettyServer的DubboCountCodec实例来编码
+         解码器为：InternalDecoder实例，内部使用NettyServer的DubboCountCodec实例来解码
+        　*/
         NettyHelper.setNettyLoggerFactory();
         ExecutorService boss = Executors.newCachedThreadPool(new NamedThreadFactory("NettyServerBoss", true));
         ExecutorService worker = Executors.newCachedThreadPool(new NamedThreadFactory("NettyServerWorker", true));
@@ -81,6 +91,7 @@ public class NettyServer extends AbstractServer implements Server {
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
             @Override
             public ChannelPipeline getPipeline() {
+                //InternalEncoder实例和InternalDecoder实例内部还是使用NettyServer的DubboCountCodec实例来编解码的。
                 NettyCodecAdapter adapter = new NettyCodecAdapter(getCodec(), getUrl(), NettyServer.this);
                 ChannelPipeline pipeline = Channels.pipeline();
                 /*int idleTimeout = getIdleTimeout();

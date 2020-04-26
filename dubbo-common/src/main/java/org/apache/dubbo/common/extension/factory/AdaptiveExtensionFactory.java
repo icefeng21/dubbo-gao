@@ -30,6 +30,7 @@ import java.util.List;
 @Adaptive
 public class AdaptiveExtensionFactory implements ExtensionFactory {
 
+    //factories = [SpringExtensionFactory实例, SpiExtensionFactory实例]
     private final List<ExtensionFactory> factories;
 
     public AdaptiveExtensionFactory() {
@@ -39,6 +40,7 @@ public class AdaptiveExtensionFactory implements ExtensionFactory {
         //spi=org.apache.dubbo.common.extension.factory.SpiExtensionFactory
         //spring=org.apache.dubbo.config.spring.extension.SpringExtensionFactory
         for (String name : loader.getSupportedExtensions()) {
+            // 保存所有ExtensionFactory的实现
             list.add(loader.getExtension(name));
         }
         factories = Collections.unmodifiableList(list);

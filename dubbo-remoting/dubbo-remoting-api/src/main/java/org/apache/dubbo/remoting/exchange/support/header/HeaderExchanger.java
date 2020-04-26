@@ -38,7 +38,11 @@ public class HeaderExchanger implements Exchanger {
     public ExchangeClient connect(URL url, ExchangeHandler handler) throws RemotingException {
         return new HeaderExchangeClient(Transporters.connect(url, new DecodeHandler(new HeaderExchangeHandler(handler))), true);
     }
-
+/**
+　这里首先对传入的ExchangeHandlerAdapter进行了两次包装，最终得到DecodeHandler实例；
+ 之后，使用Transporters.bind(providerUrl, DecodeHandler对象)创建了一个NettyServer，当初始化父类的时候启动了netty的服务端监控本机ip和端口；
+ 最后使用HeaderExchangeServer包装了上边的NettyServer，并启动了心跳计数器。
+　*/
     @Override
     public ExchangeServer bind(URL url, ExchangeHandler handler) throws RemotingException {
         return new HeaderExchangeServer(Transporters.bind(url, new DecodeHandler(new HeaderExchangeHandler(handler))));

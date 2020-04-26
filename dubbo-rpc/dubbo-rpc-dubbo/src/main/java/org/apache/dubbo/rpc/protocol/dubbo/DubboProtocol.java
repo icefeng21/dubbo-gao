@@ -265,7 +265,7 @@ public class DubboProtocol extends AbstractProtocol {
             throw new RemotingException(channel, "Not found exported service: " + serviceKey + " in " + exporterMap.keySet() + ", may be version or group mismatch " +
                     ", channel: consumer: " + channel.getRemoteAddress() + " --> provider: " + channel.getLocalAddress() + ", message:" + inv);
         }
-
+        //这不就是我们刚刚放置到exporterMap中的DubboExporter，而其中的invoker不就是我们的“filter的invokerdelegete对象”。
         return exporter.getInvoker();
     }
 
@@ -279,12 +279,20 @@ public class DubboProtocol extends AbstractProtocol {
     }
 
     @Override
+    /**
+     * 1 从invoker的url中获取将要暴露的远程服务的key：com.alibaba.dubbo.demo.DemoService:20880（实际上是：serviceGroup/serviceName:serviceVersion:port）
+     * 注意：本地暴露的key就是：com.alibaba.dubbo.demo.DemoService
+     * 2 打开ExchangeServer
+     */
     public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
         URL url = invoker.getUrl();
 
         // export service.
         String key = serviceKey(url);
+        //(InvokerDelegete的filter对象, "com.alibaba.dubbo.demo.DemoService:20880", exporterMap)
+        //key   serviceGroup/serviceName:serviceVersion:port  ===  com.alibaba.dubbo.demo.DemoService:20880
         DubboExporter<T> exporter = new DubboExporter<T>(invoker, key, exporterMap);
+        //{ "com.alibaba.dubbo.demo.DemoService:20880" -> 当前的DubboExporter实例 }
         exporterMap.put(key, exporter);
 
         //export an stub service for dispatching event
@@ -311,7 +319,7 @@ public class DubboProtocol extends AbstractProtocol {
 
     private void openServer(URL url) {
         // find server.
-        String key = url.getAddress();
+        String key = url.getAddress();//10.10.10.10:20880
         //client can export a service which's only for server to invoke
         boolean isServer = url.getParameter(IS_SERVER_KEY, true);
         if (isServer) {
@@ -320,7 +328,7 @@ public class DubboProtocol extends AbstractProtocol {
                 synchronized (this) {
                     server = serverMap.get(key);
                     if (server == null) {
-                        serverMap.put(key, createServer(url));
+                        serverMap.put(key, createServer(url));//{ "10.10.10.10:20880"<->ExchangeServer实例 }
                     }
                 }
             } else {
@@ -331,6 +339,11 @@ public class DubboProtocol extends AbstractProtocol {
     }
 
     private ExchangeServer createServer(URL url) {
+        //首先是在原本providerUrl上添加参数：channel.readonly.sent=true&heartbeat=60000&codec=dubbo（
+        // 其中的heartbeat参数会在HeaderExchangeServer启动心跳计时器时使用）
+
+        //之后使用Exchangers.bind("添加参数后的providerUrl", requestHandler)创建ExchangeServer。
+        // 首先来看一下DubboProtocol#requestHandler。这个类极其重要，后续经过层层包装后，会成为最终netty的服务端逻辑处理器。
         url = URLBuilder.from(url)
                 // send readonly event when server closes, it's enabled by default
                 .addParameterIfAbsent(CHANNEL_READONLYEVENT_SENT_KEY, Boolean.TRUE.toString())

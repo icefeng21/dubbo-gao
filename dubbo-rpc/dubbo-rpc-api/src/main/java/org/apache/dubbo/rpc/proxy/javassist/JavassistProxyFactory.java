@@ -38,6 +38,18 @@ public class JavassistProxyFactory extends AbstractProxyFactory {
     @Override
     public <T> Invoker<T> getInvoker(T proxy, Class<T> type, URL url) {
         // TODO Wrapper cannot handle this scenario correctly: the classname contains '$'
+        //proxy: com.alibaba.dubbo.demo.provider.DemoServiceImpl 实例
+        //type: interface com.alibaba.dubbo.demo.DemoService Class对象
+        //url: injvm://127.0.0.1/com.alibaba.dubbo.demo.DemoService?anyhost=true&application=demo-provider&
+        // dubbo=2.0.0&generic=false&interface=com.alibaba.dubbo.demo.DemoService&methods=sayHello&pid=3275&side=provider
+        // &timestamp=1507010529605
+        /**
+         * injvm://127.0.0.1/org.apache.dubbo.demo.DemoService?anyhost=true&application=dubbo-demo-annotation-provider&
+         * bean.name=ServiceBean:org.apache.dubbo.demo.DemoService&bind.ip=172.25.162.14&bind.port=20880&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&interface=org.apache.dubbo.demo.DemoService&methods=sayHello&pid=42896&register=true&release=&side=provider&timestamp=1561382877177
+         **/
+
+
+        //该wrapper类记录了DemoServiceImpl的属性名称，方法名称等信息
         final Wrapper wrapper = Wrapper.getWrapper(proxy.getClass().getName().indexOf('$') < 0 ? proxy.getClass() : type);
         return new AbstractProxyInvoker<T>(proxy, type, url) {
             @Override

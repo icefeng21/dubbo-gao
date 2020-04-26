@@ -18,30 +18,16 @@ package org.apache.dubbo.config.spring;
 
 import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.common.utils.StringUtils;
-import org.apache.dubbo.config.ApplicationConfig;
-import org.apache.dubbo.config.ConfigCenterConfig;
-import org.apache.dubbo.config.MetadataReportConfig;
-import org.apache.dubbo.config.MetricsConfig;
-import org.apache.dubbo.config.ModuleConfig;
-import org.apache.dubbo.config.MonitorConfig;
-import org.apache.dubbo.config.ProtocolConfig;
-import org.apache.dubbo.config.ProviderConfig;
-import org.apache.dubbo.config.RegistryConfig;
-import org.apache.dubbo.config.ServiceConfig;
+import org.apache.dubbo.config.*;
 import org.apache.dubbo.config.annotation.Service;
 import org.apache.dubbo.config.spring.context.event.ServiceBeanExportedEvent;
 import org.apache.dubbo.config.spring.extension.SpringExtensionFactory;
-
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.ApplicationEventPublisherAware;
-import org.springframework.context.ApplicationListener;
+import org.springframework.context.*;
 import org.springframework.context.event.ContextRefreshedEvent;
 
 import java.util.ArrayList;
@@ -117,6 +103,26 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
 
     @Override
     @SuppressWarnings({"unchecked", "deprecation"})
+    /**
+     * InitializingBean接口的方法：
+     * This method allows the bean instance to perform initialization only
+     * possible when all bean properties have been set
+     *
+     * 流程：
+     * 1 检查ServiceBean的ProviderConfig provider，如果为空，从applicationContext获取ProviderConfig类型的bean（这里查找的过程其实就是看有没有配置<dubbo:provider>），如果获取到了，进行设置
+     *  <dubbo:provider timeout="1000" default="true" delay="1000">
+     *         <dubbo:service id="serviceConfig2" interface="org.apache.dubbo.config.spring.api.DemoService" ref="demoService"
+     *                        group="demo2"/>
+     *     </dubbo:provider>
+     * 2 后续会参照1分别进行
+     *   -- ApplicationConfig application
+     *   -- ModuleConfig module
+     *   -- List<RegistryConfig> registries
+     *   -- MonitorConfig monitor
+     *   -- List<ProtocolConfig> protocols
+     *   -- String path：服务名称
+     * 3 判断延迟的事件是否大于0，如果是，执行export()，进行服务暴露，如果不是，结束（这种情况下服务暴露，会发生在发布上下文刷新事件的时候）
+     */
     public void afterPropertiesSet() throws Exception {
         if (getProvider() == null) {
             Map<String, ProviderConfig> providerConfigMap = applicationContext == null ? null : BeanFactoryUtils.beansOfTypeIncludingAncestors(applicationContext, ProviderConfig.class, false, false);
@@ -156,11 +162,15 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
                 ApplicationConfig applicationConfig = null;
                 for (ApplicationConfig config : applicationConfigMap.values()) {
                     if (applicationConfig != null) {
+                        //只能有一个application配置
                         throw new IllegalStateException("Duplicate application configs: " + applicationConfig + " and " + config);
                     }
                     applicationConfig = config;
                 }
                 if (applicationConfig != null) {
+                    //application:
+                    //-- id = demo-provider
+                    // -- name = demo-provider
                     setApplication(applicationConfig);
                 }
             }
@@ -313,6 +323,7 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
                 setPath(beanName);
             }
         }
+        //如果监听器加载失败则暴露，否者不暴露
         if (!supportedApplicationListener) {
             export();
         }
@@ -359,6 +370,11 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
             return AopUtils.getTargetClass(ref);
         }
         return super.getServiceClass(ref);
+    }
+
+    @Override
+    protected synchronized void doExport() {
+        super.doExport();
     }
 
     /**

@@ -104,6 +104,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
     2、获取自适应实现。
     3、使用获取到的实现
     每个类型只有一个ExtensionLoader比如Protocol只有一个，并且初始化后type是Protocol.class，objectFactory是AdaptiveExtensionFactory
+    此处获得的是Protocol$Adaptive，dubbo中每次先获得自适应的扩展实例，实际运行中用到哪个就看当时情况（输入参数等）
     */
     private static final Protocol REF_PROTOCOL = ExtensionLoader.getExtensionLoader(Protocol.class).getAdaptiveExtension();
 

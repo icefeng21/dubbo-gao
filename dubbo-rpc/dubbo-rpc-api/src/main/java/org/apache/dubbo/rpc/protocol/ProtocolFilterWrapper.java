@@ -49,9 +49,24 @@ public class ProtocolFilterWrapper implements Protocol {
     }
 
 
-
+    /**
+     * 1 根据key从url中获取相应的filter的values，再根据这个values和group去获取类上带有@Active注解的filter集合
+     * 2 之后将这些filter对传入的invoker进行递归包装层invoker（就是一个链表）
+     */
     private static <T> Invoker<T> buildInvokerChain(final Invoker<T> invoker, String key, String group) {
         Invoker<T> last = invoker;
+        //这句代码，是：根据key从url中获取相应的filter的values，再根据这个values和group去获取类上带有@Active注解的filter集合。
+        // 这一块儿具体的代码可以查看讲解spi中的loadFile方法。最终会获取到8个filter，关于filter，后续会说。
+        /**
+         * 0 = {EchoFilter@2630}
+         * 1 = {ClassLoaderFilter@2634}
+         * 2 = {GenericFilter@2640}
+         * 3 = {ContextFilter@2641}
+         * 4 = {TraceFilter@2642}
+         * 5 = {TimeoutFilter@2643}
+         * 6 = {MonitorFilter@2644}
+         * 7 = {ExceptionFilter@2645}
+         * **/
         List<Filter> filters = ExtensionLoader.getExtensionLoader(Filter.class).getActivateExtension(invoker.getUrl(), key, group);
 
         if (!filters.isEmpty()) {
@@ -119,6 +134,7 @@ public class ProtocolFilterWrapper implements Protocol {
         if (REGISTRY_PROTOCOL.equals(invoker.getUrl().getProtocol())) {
             return protocol.export(invoker);
         }
+        //protocollistenerwrapper
         return protocol.export(buildInvokerChain(invoker, SERVICE_FILTER_KEY, CommonConstants.PROVIDER));
     }
 

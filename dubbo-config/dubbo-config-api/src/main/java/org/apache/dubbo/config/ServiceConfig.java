@@ -122,6 +122,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     2、获取自适应实现。
     3、使用获取到的实现
     每个类型只有一个ExtensionLoader比如Protocol只有一个，并且初始化后type是Protocol.class，objectFactory是AdaptiveExtensionFactory
+    此处获得的是Protocol$Adaptive，dubbo中每次先获得自适应的扩展实例，实际运行中用到哪个就看当时情况（输入参数等）
     */
     private static final Protocol protocol = ExtensionLoader.getExtensionLoader(Protocol.class).getAdaptiveExtension();
 
@@ -397,6 +398,11 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         return (export == null && provider != null) ? provider.getExport() : export;
     }
 
+    @Override
+    public void setExport(Boolean export) {
+        super.setExport(export);
+    }
+
     private boolean shouldDelay() {
         Integer delay = getDelay();
         return delay != null && delay > 0;
@@ -580,6 +586,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
             // export to local if the config is not remote (export to remote only when config is remote)
             if (!SCOPE_REMOTE.equalsIgnoreCase(scope)) {
+                //本地暴露
                 exportLocal(url);
             }
             // export to remote if the config is not local (export to local only when config is local)
@@ -644,9 +651,40 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                 .setHost(LOCALHOST_VALUE)
                 .setPort(0)
                 .build();
-        Exporter<?> exporter = protocol.export(
+
+        //根据协议名(injvm)，获取Protocol的实现 InjvmProtocol
+        //获得Protocol的实现过程中，会对Protocol先进行依赖注入，然后进行Wrapper包装，最后返回被修改过的Protocol
+        //包装经过了ProtocolFilterWrapper，ProtocolListenerWrapper，RegistryProtocol(InjvmProtocol)
+        //arg0: com.alibaba.dubbo.demo.provider.DemoServiceImpl 实例
+        //arg1: interface com.alibaba.dubbo.demo.DemoService Class对象
+        /**
+        arg2: iinjvm://127.0.0.1/org.apache.dubbo.demo.DemoService?anyhost=true&application=dubbo-demo-annotation-provider&
+         bean.name=ServiceBean:org.apache.dubbo.demo.DemoService&bind.ip=172.25.162.14&bind.port=20880&deprecated=false&dubbo=2.0.2&
+         dynamic=true&generic=false&interface=org.apache.dubbo.demo.DemoService&methods=sayHello&pid=42896&
+         register=true&release=&side=provider&timestamp=1561382877177
+        **/
+        //Protocol$Adaptive.export(Invoker<T> invoker)
+        //这里，首先是参数检查和赋值。之后获取key为injvm的Protocol实现类：InjvmProtocol，该类会在spi进行aop的时候被ProtocolFilterWrapper和ProtocolListenerWrapper递归包裹，最终调用链为：
+        //ProxyFactory$Adaptive -> ProtocolFilterWrapper -> ProtocolListenerWrapper -> InjvmProtocol
+        //先filter后Listener，其实先后无关系，最后返回的是被listener初始化的一个调用链其中export包含了8个filter和你要暴露的协议export（injvm）
+
+        //最终的InjvmExporter实例：
+        //key = "com.alibaba.dubbo.demo.DemoService"
+        //exporterMap: { "com.alibaba.dubbo.demo.DemoService" -> 当前的InjvmExporter实例 }
+        //Invoker<T> invoker = 被filter进行递归包裹后的Invoker
+        //最终的ServiceConfig的exporters列表：
+        //List<Exporter<?>> exporters = [ 上边的injvmExporter实例 ]
+        final Exporter export = protocol.export(
                 proxyFactory.getInvoker(ref, (Class) interfaceClass, local));
+        Exporter<?> exporter = export;
         exporters.add(exporter);
+        /**
+         *  InjvmProtocol.export:
+         *  Invoker<T> invoker = 被filter进行递归包裹后的Invoker
+         *
+         * 最终的ServiceConfig的exporters列表：
+         * List<Exporter<?>> exporters = [ 上边的injvmExporter实例 ]
+         * **/
         logger.info("Export dubbo service " + interfaceClass.getName() + " to local registry url : " + local);
     }
 

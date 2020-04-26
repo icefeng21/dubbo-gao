@@ -41,8 +41,22 @@ public class ChannelHandlers {
     static void setTestingChannelHandlers(ChannelHandlers instance) {
         INSTANCE = instance;
     }
-
+    /**
+     2      * 这里又是层层包裹：
+     3      * MultiMessageHandler
+     4      * --HeartbeatHandler
+     5      *   --AllChannelHandler
+     6      *     --DecodeHandler
+     7      *       --HeaderExchangeHandler
+     8      *         --ExchangeHandlerAdapter
+     9      * @param handler
+     10      * @param url
+     11      * @return
+     12      */
     protected ChannelHandler wrapInternal(ChannelHandler handler, URL url) {
+        //ExtensionLoader.getExtensionLoader(Dispatcher.class).getAdaptiveExtension()获取到一个Dispatcher$Adaptive适配类。
+        //Dispatcher$Adaptive.dispatch(DecodeHandler对象, providerUrl)获取到AllDispatcher
+        //AllDispatcher.dispatch 获得AllChannelHandler，实例=先初始化父类的构造WrappedChannelHandler
         return new MultiMessageHandler(new HeartbeatHandler(ExtensionLoader.getExtensionLoader(Dispatcher.class)
                 .getAdaptiveExtension().dispatch(handler, url)));
     }

@@ -32,6 +32,13 @@ import java.util.concurrent.RejectedExecutionException;
 
 public class AllChannelHandler extends WrappedChannelHandler {
 
+    /**
+     初始化后：
+     　WrappedChannelHandler.url：dubbo://10.10.10.10:20880/com.alibaba.dubbo.demo.DemoService?anyhost=true&application=demo-provider&channel.readonly.sent=true&codec=dubbo&dubbo=2.0.0&generic=false&heartbeat=60000&interface=com.alibaba.dubbo.demo.DemoService&methods=sayHello&pid=1287&side=provider&threadname=DubboServerHandler-10.10.10.10:20880&timestamp=1507116859919
+     WrappedChannelHandler.handler：DecodeHandler对象
+     WrappedChannelHandler.executor：FixedThreadPool实例
+     WrappedChannelHandler.SHARED_EXECUTOR=CachedThreadPool实例。
+    　*/
     public AllChannelHandler(ChannelHandler handler, URL url) {
         super(handler, url);
     }
